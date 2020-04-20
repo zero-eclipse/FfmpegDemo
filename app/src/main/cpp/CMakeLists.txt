@@ -132,6 +132,7 @@ add_library( # Sets the name of the library.
 #        sdl/src/SDL.c
 #        sdl/src/dynapi/SDL_dynapi.c
         native-lib.cpp
+        ffmpeg_sdl.cpp
         SDLTest.cpp
         )
 

@@ -14,6 +14,7 @@ extern "C" {
 #include <SDL_stdinc.h>
 }
 
+// 获取视频信息
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMovInfo(JNIEnv *env,jobject obj){
     using namespace std;
@@ -96,7 +97,7 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMovInfo(JNIEnv *env,jobject ob
     return jInfo;
 };
 
-
+// SDL播放本地YUV视频
 extern "C" JNIEXPORT void JNICALL
 Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMov2YUV(
         JNIEnv *env,
@@ -290,6 +291,7 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMov2YUV(
     avcodec_free_context(&pCodecCtx);
     avformat_free_context(fmtContext);
 
+    LOGI("内容已经完成");
     env->CallObjectMethod(obj, methodId2 , 200);
 
 }

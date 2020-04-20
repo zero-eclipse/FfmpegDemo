@@ -68,20 +68,24 @@ public class MainActivity extends AppCompatActivity {
 
     public void SDL_Render(View view) {
         startActivity(new Intent(this, SDLActivity.class));
+
     }
 
     public void Video_Info(View view) {
         textView.setText(util.FFmpegMovInfo());
     }
 
-    public void Video2YUV(View view) {
-        util.call_back();
+    public void Video2YUV(final View view) {
+        view.setEnabled(false);
         util.setOnCallBackListener(new InterFFmpegResult() {
             @Override
             public void translateYUV() {
                 Toast.makeText(MainActivity.this, "yuv转码完成", Toast.LENGTH_SHORT).show();
+                view.setEnabled(true);
             }
         });
+        util.FFmpegMov2YUV();
+
     }
 }
 

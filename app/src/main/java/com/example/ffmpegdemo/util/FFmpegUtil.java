@@ -13,7 +13,7 @@ public class FFmpegUtil {
     }
 
 
-    public  InterFFmpegResult result;
+    private InterFFmpegResult result;
 
 
     private Context context;
@@ -46,7 +46,10 @@ public class FFmpegUtil {
     }
 
 
+    // jni任务完成后对java函数的回调
     public void call_back(){
+
+        Log.e("zero","发生回调");
 
         if(result!=null){
             result.translateYUV();
