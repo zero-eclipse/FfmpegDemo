@@ -18,14 +18,22 @@ public class FFmpegUtil {
 
     private Context context;
 
-    public FFmpegUtil(Context context){
+    public FFmpegUtil(Context contex){
         this.context=context;
     }
+
+    public void setOnCallBackListener(InterFFmpegResult result){
+        this.result=result;
+    }
+
     /**
      * A native method that is implemented by the 'native-lib' native library,
      * which is packaged with this application.
      */
-    public native String FFmpegMov2YUV();
+
+
+    public native String FFmpegMovInfo();
+    public native void FFmpegMov2YUV();
 
 
 
@@ -38,7 +46,7 @@ public class FFmpegUtil {
     }
 
 
-    public void call_back(int code){
+    public void call_back(){
 
         if(result!=null){
             result.translateYUV();

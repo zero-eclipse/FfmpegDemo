@@ -22,13 +22,21 @@
         android:text="获取视频信息"
         android:onClick="Video_Info"
         />
+    <Button
+        android:id="@+id/FFmpegYUV"
+        android:layout_width="match_parent"
+        android:gravity="center"
+        android:layout_height="wrap_content"
+        android:text="视频转YUV420P格式"
+        android:onClick="Video2YUV"
+        />
 
     <Button
         android:id="@+id/SDL_Button"
         android:layout_width="match_parent"
         android:gravity="center"
         android:layout_height="wrap_content"
-        android:text="本地YUV视频渲染"
+        android:text="播放本地YUV视频"
         android:onClick="SDL_Render"
         />
 

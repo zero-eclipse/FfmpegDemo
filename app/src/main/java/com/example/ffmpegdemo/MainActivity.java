@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -12,6 +13,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.ffmpegdemo.util.FFmpegUtil;
+import com.example.ffmpegdemo.util.InterFFmpegResult;
 
 import org.libsdl.app.SDLActivity;
 
@@ -23,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private TextView textView;
+    private FFmpegUtil util;
 
 
     @Override
@@ -50,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void initSet(){
-
+        util = new FFmpegUtil(this);
     }
 
 
@@ -68,8 +71,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void Video_Info(View view) {
-        FFmpegUtil util = new FFmpegUtil(this);
-        textView.setText(util.FFmpegMov2YUV());
+        textView.setText(util.FFmpegMovInfo());
+    }
+
+    public void Video2YUV(View view) {
+        util.call_back();
+        util.setOnCallBackListener(new InterFFmpegResult() {
+            @Override
+            public void translateYUV() {
+                Toast.makeText(MainActivity.this, "yuv转码完成", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
 
