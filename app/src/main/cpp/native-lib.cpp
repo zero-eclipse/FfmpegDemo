@@ -20,6 +20,7 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMovInfo(JNIEnv *env,jobject ob
     using namespace std;
     jclass pJclass = env->GetObjectClass(obj);
     jmethodID methodId = env->GetMethodID(pJclass, "getMovPath", "()Ljava/lang/String;");
+    jmethodID methodId2 = env->GetMethodID(pJclass, "call_back", "(I)V");
     jstring path = static_cast<jstring>(env->CallObjectMethod(obj, methodId));
     const char *mov_path = env->GetStringUTFChars(path, 0);
     __android_log_print(ANDROID_LOG_INFO, "zero_cpp", "sdcard: %s", mov_path);
@@ -93,7 +94,7 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMovInfo(JNIEnv *env,jobject ob
     auto jInfo = env->NewStringUTF(buff);
 
     avcodec_free_context(&pCodecCtx);
-
+    env->CallObjectMethod(obj, methodId2 ,100);
     return jInfo;
 };
 
@@ -105,7 +106,7 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMov2YUV(
     using namespace std;
     jclass pJclass = env->GetObjectClass(obj);
     jmethodID methodId = env->GetMethodID(pJclass, "getMovPath", "()Ljava/lang/String;");
-    jmethodID methodId2 = env->GetMethodID(pJclass, "call_back", "()V");
+    jmethodID methodId2 = env->GetMethodID(pJclass, "call_back", "(I)V");
     jstring path = static_cast<jstring>(env->CallObjectMethod(obj, methodId));
     const char *mov_path = env->GetStringUTFChars(path, 0);
     __android_log_print(ANDROID_LOG_INFO, "zero_cpp", "sdcard: %s", mov_path);
@@ -163,23 +164,7 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMov2YUV(
         __android_log_print(ANDROID_LOG_INFO, "zero_cpp", "解码器打开失败");
     }
 
-    LOGI("打开解码器成功");
 
-    char buff[1024];
-    char width[10];
-    char height[10];
-    char time[10];
-    SDL_itoa(pCodecCtx->width, width, 10); // 值；转换的数组；进制
-    SDL_itoa(pCodecCtx->height, height, 10);
-    SDL_itoa(static_cast<int>(fmtContext->duration), time, 10);
-    strcat(buff, "width= <");
-    strcat(buff, width);
-    strcat(buff, " > height= <");
-    strcat(buff, height);
-    strcat(buff, " > duration= <");
-    strcat(buff, time);
-    strcat(buff, " >");
-    auto jInfo = env->NewStringUTF(buff);
 
 
 
@@ -287,12 +272,13 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMov2YUV(
     //关闭流
     fclose(file);
     av_frame_free(&avFrame);
+    av_free(out);
     av_frame_free(&avFrame_YUV420P);
     avcodec_free_context(&pCodecCtx);
     avformat_free_context(fmtContext);
 
     LOGI("内容已经完成");
-    env->CallObjectMethod(obj, methodId2 , 200);
+    env->CallObjectMethod(obj, methodId2 ,200);
 
 }
 

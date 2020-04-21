@@ -19,13 +19,12 @@ import org.libsdl.app.SDLActivity;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
-public class MainActivity extends AppCompatActivity {
-
-
+public class MainActivity extends AppCompatActivity implements InterFFmpegResult {
 
 
     private TextView textView;
     private FFmpegUtil util;
+    private View view;
 
 
     @Override
@@ -35,25 +34,26 @@ public class MainActivity extends AppCompatActivity {
 
         init();
         // 获取权限
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                !=PERMISSION_GRANTED){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     Manifest.permission.READ_EXTERNAL_STORAGE,
-            },10001);
-        }else{
+            }, 10001);
+        } else {
             initSet();
         }
 
 
     }
 
-    public void init(){
-        textView =  findViewById(R.id.sample_text);
+    public void init() {
+        textView = findViewById(R.id.sample_text);
     }
 
-    public void initSet(){
+    public void initSet() {
         util = new FFmpegUtil(this);
+        util.setOnCallBackListener(this);
     }
 
 
@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if(requestCode==10001){
+        if (requestCode == 10001) {
             initSet();
         }
     }
@@ -72,20 +72,58 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void Video_Info(View view) {
-        textView.setText(util.FFmpegMovInfo());
+        if (this.view != null) {
+            return;
+        }
+        view.setEnabled(false);
+        this.view = view;
+        util.FFmpegMovInfo();
     }
 
     public void Video2YUV(final View view) {
+        if (this.view != null) {
+            return;
+        }
         view.setEnabled(false);
-        util.setOnCallBackListener(new InterFFmpegResult() {
-            @Override
-            public void translateYUV() {
-                Toast.makeText(MainActivity.this, "yuv转码完成", Toast.LENGTH_SHORT).show();
-                view.setEnabled(true);
-            }
-        });
+        this.view = view;
         util.FFmpegMov2YUV();
+    }
+
+    public void Audio2PCM(View view) {
+        if (this.view != null) {
+            return;
+        }
+        view.setEnabled(false);
+        this.view = view;
+        util.FFmpegAudio();
+    }
+
+    // JNI的借口回调(获取视频信息，这里没在将视频同伙借口返回，而是函数返回)
+    @Override
+    public void obtainInfo() {
+        Toast.makeText(MainActivity.this, "获取信息完成", Toast.LENGTH_SHORT).show();
+        this.view.setEnabled(true);
+        this.view = null;
+    }
+
+
+    // JNI的借口回调(视频转码)
+    @Override
+    public void translateVideo() {
+        Toast.makeText(MainActivity.this, "视频转码yuv完成", Toast.LENGTH_SHORT).show();
+        this.view.setEnabled(true);
+        this.view = null;
 
     }
+
+    // JNI的借口回调(音频转码)
+    @Override
+    public void translateAudio() {
+        Toast.makeText(MainActivity.this, "音频转码pcm完成", Toast.LENGTH_SHORT).show();
+        this.view.setEnabled(true);
+        this.view = null;
+    }
+
+
 }
 

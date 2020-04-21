@@ -32,8 +32,12 @@ public class FFmpegUtil {
      */
 
 
+    // 获取视频信息
     public native String FFmpegMovInfo();
+    // 视频每帧转码YUV420p
     public native void FFmpegMov2YUV();
+
+    public native void FFmpegAudio();
 
 
 
@@ -47,14 +51,26 @@ public class FFmpegUtil {
 
 
     // jni任务完成后对java函数的回调
-    public void call_back(){
+    public void call_back(int code){
 
-        Log.e("zero","发生回调");
 
         if(result!=null){
-            result.translateYUV();
+            switch (code){
+                case 100:
+                    result.obtainInfo();
+                    break;
+                case 200:
+                    result.translateVideo();
+                    break;
+                case 300:
+                    result.translateAudio();
+                    break;
+            }
+
         }
     }
+
+
 
 
 }

@@ -21,6 +21,7 @@
         </activity>
 
         <activity android:name="org.libsdl.app.SDLActivity"
+            android:hardwareAccelerated="true"
             android:configChanges="keyboardHidden|orientation"
             />
 

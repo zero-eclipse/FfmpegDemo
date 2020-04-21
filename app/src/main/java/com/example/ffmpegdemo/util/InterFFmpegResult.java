@@ -1,5 +1,7 @@
 package com.example.ffmpegdemo.util;
 
 public interface InterFFmpegResult {
-    void translateYUV();
+    void obtainInfo();
+    void translateVideo();
+    void translateAudio();
 }

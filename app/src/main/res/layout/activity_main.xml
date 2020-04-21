@@ -36,9 +36,19 @@
         android:layout_width="match_parent"
         android:gravity="center"
         android:layout_height="wrap_content"
-        android:text="播放本地YUV视频"
+        android:text="逐帧转码并播放"
         android:onClick="SDL_Render"
         />
+
+    <Button
+        android:id="@+id/SDL_FFmpeg_Button"
+        android:layout_width="match_parent"
+        android:gravity="center"
+        android:layout_height="wrap_content"
+        android:text="音频解码"
+        android:onClick="Audio2PCM"
+        />
+
 
 
 
