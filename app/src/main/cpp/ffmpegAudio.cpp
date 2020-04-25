@@ -21,6 +21,8 @@ extern "C" {
 }
 
 
+
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegAudio(JNIEnv *env, jobject obj) {
     jclass pJclass = env->GetObjectClass(obj);
@@ -55,8 +57,9 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegAudio(JNIEnv *env, jobject obj
     /**
      * step 3 查找解码器
      */
-    int av_audio_index = av_find_best_stream(fmtContext, AVMEDIA_TYPE_AUDIO, -1, -1, NULL,
-                                             0);//查找视频流索引
+    //查找音频流索引
+    int av_audio_index = av_find_best_stream(fmtContext, AVMEDIA_TYPE_AUDIO, -1, -1, NULL,0);
+    //查找音频流
     if (av_audio_index == -1) { //没有找到视频流
         LOGI("没找到音频流的位置");
         env->CallObjectMethod(obj, methodId2, 303);

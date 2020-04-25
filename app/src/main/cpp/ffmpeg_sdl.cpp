@@ -5,10 +5,12 @@
 #include <jni.h>
 #include <android/log.h>
 
+
 #define TAG "zero_cpp"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,TAG,__VA_ARGS__)
-
-extern "C"{
+#define MAX_AUDIO_FRAME_SIZE (44100 * 2)
+extern "C" {
+#include <libswresample/swresample.h>
 #include <SDL.h>
 #include <libavcodec/avcodec.h>
 #include <libavutil/avutil.h>
@@ -17,9 +19,46 @@ extern "C"{
 #include <libavutil/imgutils.h>
 };
 
-int main(int argc,char *argv[]){
 
-    // -------------------- ffmpeg --------------------
+
+/**
+ * 回调函数
+ * 播放一个声音节点，需要通过fill_audio读取很多帧
+ * @param userdata
+ * @param stream
+ * @param len
+ * @return
+ */
+
+//读到那个位置
+static Uint8 *audio_pos;
+//读取长度
+static int audio_len;
+
+//播放单个声音节点需要读取多少帧
+void fill_audio(void *userdata, Uint8 *stream, int len) {
+    //读取数据
+    SDL_memset(stream, 0, len);
+    if (audio_len == 0) {
+        //读取完毕
+        return;
+    }
+    len = ((Uint32) len > audio_len ? audio_len : len);
+    //SDL_MixAudio: 完成混音
+    //参数一：数据源
+    //参数二：读取到那一个位置
+    //参数三：总共读取的长度
+    //参数四：音量
+    SDL_MixAudio(stream, audio_pos, len, SDL_MIX_MAXVOLUME);
+    //指针往下移动
+    audio_pos += len;
+    audio_len -= len;
+}
+
+
+int main(int argc, char *argv[]) {
+
+    // -------------------- ffmpeg 打开视频流 --------------------
 
     // 第一步：封装
     AVFormatContext *fmtContext = avformat_alloc_context();
@@ -33,7 +72,7 @@ int main(int argc,char *argv[]){
     //第二步：获取文件信息
     int fmt = avformat_find_stream_info(fmtContext, NULL);
     if (fmt < 0) {
-        LOGI( "获取视频失败");
+        LOGI("获取视频失败");
         char *errorInfo = nullptr;
         __android_log_print(ANDROID_LOG_INFO, "zero_cpp", "获取视频失败,错误信息：%c", *errorInfo);
     }
@@ -41,9 +80,10 @@ int main(int argc,char *argv[]){
     // 第三步：遍历流，找到我们需要的流
     //视频的位置索引
     int av_index = av_find_best_stream(fmtContext, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);//查找视频流索引
+
+
     if (av_index == -1) { //没有找到视频流
         LOGI("没找到视频流的位置");
-
     }
 
     LOGI("获取视频流成功");
@@ -71,13 +111,114 @@ int main(int argc,char *argv[]){
         LOGI("解码器打开失败");
     }
 
-    // -------------------- SDL --------------------
+    AVFrame *avFrame = av_frame_alloc(); // 缓存一帧的数据，解码前的数据
+    AVFrame *avFrame_YUV420P = av_frame_alloc(); // 输出的格式类型缓冲区，解码后的数据
+    AVFrame *audio_in_frame = av_frame_alloc();
+
+
+    // -------------------- SDL 打开音频--------------------
+    //查找音频流索引
+    int av_audio_index = av_find_best_stream(fmtContext, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+
+    // 第四步：找到音频解码器信息
+    //得到的解码器
+    AVCodecParameters *pAudioCodecParam = fmtContext->streams[av_audio_index]->codecpar;
+
+    //申请内存空间
+    AVCodecContext *audio_av_cd_ctx = avcodec_alloc_context3(NULL);
+
+    if (avcodec_parameters_to_context(audio_av_cd_ctx, pAudioCodecParam) < 0) {
+
+        LOGI("不存在解码器");
+
+    }
+
+    AVCodec *pAudioCodec = avcodec_find_decoder(audio_av_cd_ctx->codec_id);
+
+    // 第五步 ：打开解码器
+    int avAudioOpen = avcodec_open2(audio_av_cd_ctx, pAudioCodec, NULL);
+    if (avAudioOpen != 0) {
+        LOGI("解码器打开失败");
+    }
+
+
+
+    //输出的声道布局（立体、环绕..）
+    int64_t audio_out_ch_layout = AV_CH_LAYOUT_STEREO;
+    //输出音频的采样格式 16位 R L R L
+    AVSampleFormat audio_out_sample_fmt = AV_SAMPLE_FMT_S16;
+    //输出音频采样率仍然等于输入的音频采样率
+    //如果一定要转，要进行音频重采样
+    int audio_out_sample_rate = audio_av_cd_ctx->sample_rate;
+
+
+    //根据输出的声道布局获取输出的声道个数
+    int audio_out_nb_channels = av_get_channel_layout_nb_channels(audio_out_ch_layout);
+
+    int audio_out_nb_samples = audio_av_cd_ctx->frame_size;
+
+
+
+    //输入声道布局
+    int64_t audio_in_ch_layout = av_get_default_channel_layout(audio_av_cd_ctx->channels);
+
+    //SwrContext:音频采样数据上下文
+    SwrContext *audio_swrCtx = swr_alloc();
+    //swr_alloc_set_opts: 设置音频采样配置(例如：输出声道、采样格式、采样率等等......)
+    //参数一：音频采样上下文
+    //参数二：输出声道布局
+    //参数三：输出音频的采样格式
+    //参数四：输出音频采样率
+    //参数五：输入声道布局
+    //参数六：输入音频采样格式
+    //参数七：输入音频采样率
+    //参数八：偏移量
+    //参数九：日志上下文
+    swr_alloc_set_opts(audio_swrCtx,
+                       audio_out_ch_layout,
+                       audio_out_sample_fmt,
+                       audio_out_sample_rate,
+                       audio_in_ch_layout,
+                       audio_av_cd_ctx->sample_fmt,
+                       audio_av_cd_ctx->sample_rate,
+                       0,
+                       NULL);
+    swr_init(audio_swrCtx);
+
+    //转换时用的缓冲区
+    //44100 32bit
+    //大小: size = 48000 * 4 / 1024 = 187KB
+    uint8_t *audio_out_buffer = (uint8_t *) av_malloc(MAX_AUDIO_FRAME_SIZE);
+
+    //参数设置
+    SDL_AudioSpec desired;
+    //采样率
+    desired.freq = audio_av_cd_ctx->sample_rate;
+    //音频数据格式
+    desired.format = AUDIO_S16SYS;
+    //声道个数
+    desired.channels = static_cast<Uint8>(audio_out_nb_channels);
+    //音频缓冲区的采样个数(帧大小)
+    //AAC:1024  MP3:1152
+    desired.samples = audio_out_nb_samples;
+    //回调函数
+    desired.callback = fill_audio;
+    desired.userdata = audio_av_cd_ctx;
+
+    //2.打开音频设备
+    if (SDL_OpenAudio(&desired, NULL) < 0) {
+        printf("无法打开音频设备.\n");
+        return -1;
+    }
+
+    // ------------------audio-stop ----------------------
+    // -------------------- SDL 渲染视频--------------------
 
     /**
      * SDL初始化
      */
 
-    if(SDL_Init(SDL_INIT_EVERYTHING)==-1){
+    if (SDL_Init(SDL_INIT_EVERYTHING) == -1) {
         LOGI("SDL 初始化失败");
     }
 
@@ -128,20 +269,6 @@ int main(int argc,char *argv[]){
     );
 
 
-    // -------------------- 将数据转为yuv420p保存在本地
-    // 第六步： 循环读取一帧的数据
-    //打开文件
-    const char *point_path = "/storage/emulated/0/ffmpeg/shoe.yuv";
-    FILE *file = fopen(point_path, "wb");
-    if (file == NULL) {
-        LOGI("文件不存在");
-
-    }
-
-
-    int y_size = 0, u_size = 0, v_size = 0;
-    AVFrame *avFrame = av_frame_alloc(); // 缓存一帧的数据，解码前的数据
-    AVFrame *avFrame_YUV420P = av_frame_alloc(); // 输出的格式类型缓冲区，解码后的数据
 
     // 像素格式 ，像素的宽，高，位置(通用的设置为1)
     //缓冲数组（AVFrame中的data指向的内存）
@@ -163,7 +290,6 @@ int main(int argc,char *argv[]){
     );
 
 
-
     LOGI("数据填充成功");
 
     AVPacket *avPacket = (AVPacket *) (av_malloc(sizeof(AVPacket)));
@@ -182,23 +308,64 @@ int main(int argc,char *argv[]){
     ); // 上下文
 
     LOGI("数据转格式成功");
-    SDL_Rect rect ;
+    SDL_Rect rect;
 
-    rect.x=0;
-    rect.y=0;
-    rect.w=screen_width*2;
-    rect.h=screen_height*2;
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = screen_width * 2;
+    rect.h = screen_height * 2;
 
-    int frame_cnt=0; // 记录帧数
-    while (av_read_frame(fmtContext,avPacket) >= 0) {
+    //开始播放
+    SDL_PauseAudio(0);
 
-        // 开始不断读取每一帧数据
-        int ret = avcodec_send_packet(pCodecCtx, avPacket);
-        if(avPacket->stream_index == av_index){ //判断是否为视频流
-            if(ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF){
-                break;
+    int frame_cnt = 0; // 记录帧数
+    while (av_read_frame(fmtContext, avPacket) >= 0) {
+
+
+        if (avPacket->stream_index == av_audio_index) { // 判断是否是音频流
+            // 开始不断读取每一帧数据
+            avcodec_send_packet(audio_av_cd_ctx, avPacket);
+            // 解析每一帧的数据到avFrame
+            while (avcodec_receive_frame(audio_av_cd_ctx, audio_in_frame) == 0) {
+                // 在这里音频最后一帧可能结束了，但是还是能receive到数据
+                if (**(const uint8_t **) audio_in_frame->data == 0) {
+                    LOGI("音频数据读取结束");
+                    break;
+                }
+
+
+
+                //读取out_buffer中有效的音频采样数据，写入pcm文件中
+                //参数一：行大小
+                //参数二：输出的声道个数
+                //参数三：输入大小
+                //参数四：输出音频的采样格式
+                //参数五：字节对齐方式
+                int out_buffer_size = av_samples_get_buffer_size(
+                        NULL,
+                        audio_out_nb_channels,
+                        audio_out_nb_samples,
+                        audio_out_sample_fmt,
+                        1);
+
+                swr_convert(audio_swrCtx,
+                            &audio_out_buffer,
+                            out_buffer_size,
+                            (const uint8_t **) audio_in_frame->data,
+                            audio_in_frame->nb_samples);
+
+
+                audio_pos = audio_out_buffer;
+                audio_len = out_buffer_size;
+
+                SDL_Delay(14);
+
             }
+        }
 
+        if (avPacket->stream_index == av_index) { //判断是否为视频流
+            // 开始不断读取每一帧数据
+            avcodec_send_packet(pCodecCtx, avPacket);
             // 解析每一帧的数据到avFrame
             while (avcodec_receive_frame(pCodecCtx, avFrame) == 0) {
 
@@ -212,39 +379,37 @@ int main(int argc,char *argv[]){
                         pCodecCtx->height,
                         avFrame_YUV420P->data,
                         avFrame_YUV420P->linesize);
-                frame_cnt++;
 
                 // ---------------------------------- SDL 开始渲染 ----------------------------------
                 // 这里传入的数据是Y（data[0]）
-                int update=SDL_UpdateTexture(texture,NULL,avFrame_YUV420P->data[0],avFrame_YUV420P->linesize[0]);
+                SDL_UpdateTexture(texture, NULL, avFrame_YUV420P->data[0],
+                                  avFrame_YUV420P->linesize[0]);
 
-                LOGI("update= %d",update);
                 // 清空帧画面
-                LOGI("3");
                 SDL_RenderClear(renderer);
                 //重新绘制
 
-                LOGI("4");
-                SDL_RenderCopy(renderer,texture,NULL,&rect);
-                LOGI("5");
+                SDL_RenderCopy(renderer, texture, NULL, &rect);
                 // 显示播放
                 SDL_RenderPresent(renderer);
-                LOGI("6");
                 // 播放帧的速度
-                SDL_Delay(20);
+                // SDL_Delay(25);
             }
         }
 
-        av_packet_unref(avPacket);
-
     }
+
     //关闭流
-    fclose(file);
+    av_packet_free(&avPacket);
     av_frame_free(&avFrame);
     av_frame_free(&avFrame_YUV420P);
+    av_frame_free(&audio_in_frame);
+    av_free(audio_out_buffer);
+    av_free(out);
+    avcodec_free_context(&audio_av_cd_ctx);
     avcodec_free_context(&pCodecCtx);
     avformat_free_context(fmtContext);
-
-
-
+    SDL_DestroyRenderer(renderer);
+    SDL_Quit();
+    return 0;
 }

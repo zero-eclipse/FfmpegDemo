@@ -36,8 +36,10 @@ public class FFmpegUtil {
     public native String FFmpegMovInfo();
     // 视频每帧转码YUV420p
     public native void FFmpegMov2YUV();
-
+    // 音频解码
     public native void FFmpegAudio();
+    // 视频压缩
+    public native void FFmpegCompressMov(String[] argv);
 
 
 

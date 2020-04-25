@@ -6,6 +6,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
     message(STATUS "optional:-std=c++11")
 endif(CMAKE_COMPILER_IS_GNUCXX)
+
 # 1. 定义so库和头文件所在目录，方面后面使用
 set(ffmpeg_lib_dir ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 set(ffmpeg_head_dir ${CMAKE_SOURCE_DIR}/ffmpeg)
@@ -66,6 +67,13 @@ add_library( avdevice
 set_target_properties( avdevice
         PROPERTIES IMPORTED_LOCATION
         ${ffmpeg_lib_dir}/libavdevice.so )
+
+#add_library( postproc
+#        SHARED
+#        IMPORTED)
+#set_target_properties( postproc
+#        PROPERTIES IMPORTED_LOCATION
+#        ${ffmpeg_lib_dir}/libpostproc.so )
 
 # 4. 添加ffmpeg相关的so库---------------------------
 # SDL核心库(最重要的库)
@@ -131,11 +139,18 @@ add_library( # Sets the name of the library.
 #        sdl/src/core/android/SDL_android.c
 #        sdl/src/SDL.c
 #        sdl/src/dynapi/SDL_dynapi.c
+
+
+        # fftool
+
+        # 自定义功能
         native-lib.cpp
-        ffmpeg_sdl.cpp
-#        SDLTest.cpp
-        ffmpeg_sdl.cpp
         ffmpegAudio.cpp
+        ffmpeg_sdl.cpp
+#        audioPlay.cpp
+        ffmpegCompress.cpp
+        #  SDLTest.cpp
+
         )
 
 

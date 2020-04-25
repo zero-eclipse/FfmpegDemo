@@ -238,8 +238,6 @@ Java_com_example_ffmpegdemo_util_FFmpegUtil_FFmpegMov2YUV(
             while (avcodec_receive_frame(pCodecCtx, avFrame) == 0) {
                 __android_log_print(ANDROID_LOG_INFO,"zero","------------------------------------------------");
 
-                __android_log_print(ANDROID_LOG_INFO,"zero","avFrame->data[0]=%d",avFrame->data[0]);
-                __android_log_print(ANDROID_LOG_INFO,"zero","avFrame->data[1]=%d",avFrame->data[1]);
                 // 将AVFrame转换为YUV420P
                 // 上下文，像素数据，输入每一行的大小，输入开始的位置，输入画面每一行的转码的位置，输出的数据，输出每一行的大小
                 sws_scale(

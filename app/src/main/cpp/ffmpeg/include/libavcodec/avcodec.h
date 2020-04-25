@@ -5492,7 +5492,8 @@ void avpicture_free(AVPicture *picture);
  * @deprecated use av_image_fill_arrays() instead.
  */
 attribute_deprecated
-int avpicture_fill(AVPicture *picture);
+int avpicture_fill(AVPicture *picture, const uint8_t *ptr,
+                   enum AVPixelFormat pix_fmt, int width, int height);
 
 /**
  * @deprecated use av_image_copy_to_buffer() instead.

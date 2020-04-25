@@ -17,7 +17,6 @@ android {
             ndk {
                 //abi兼容设置
                 abiFilters "armeabi-v7a"
-                ldLibs "log"
             }
 
         }

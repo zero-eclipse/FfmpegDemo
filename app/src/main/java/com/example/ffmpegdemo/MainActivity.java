@@ -3,6 +3,7 @@ package com.example.ffmpegdemo;
 import android.Manifest;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,6 +17,8 @@ import com.example.ffmpegdemo.util.FFmpegUtil;
 import com.example.ffmpegdemo.util.InterFFmpegResult;
 
 import org.libsdl.app.SDLActivity;
+
+import java.io.File;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
@@ -77,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements InterFFmpegResult
         }
         view.setEnabled(false);
         this.view = view;
-        util.FFmpegMovInfo();
+        textView.setText(util.FFmpegMovInfo());
     }
 
     public void Video2YUV(final View view) {
@@ -104,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements InterFFmpegResult
         Toast.makeText(MainActivity.this, "获取信息完成", Toast.LENGTH_SHORT).show();
         this.view.setEnabled(true);
         this.view = null;
+
     }
 
 
@@ -124,6 +128,15 @@ public class MainActivity extends AppCompatActivity implements InterFFmpegResult
         this.view = null;
     }
 
-
+    // 视频压缩
+    public void VideoCompress(View view) {
+        String path=util.getMovPath();
+        String command="ffmpeg -i "+path+" -b:v 640k "
+                +Environment.getExternalStorageDirectory().getAbsolutePath()
+                + File.separator+"ffmpeg"+ File.separator+"shoe.mov";
+        String[] argv=command.split(" ");
+        int argc = argv.length;
+        util.FFmpegCompressMov(argv);
+    }
 }
 
